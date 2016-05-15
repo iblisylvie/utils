@@ -45,13 +45,29 @@ def find_projects(content):
 def clone_projects(abs_dir, projects, group):
     clone_cmd = "git clone git@gitlab.mobvoi.com:{group}/{project}.git {dir}"
     for project in projects:
-        project_local_dir = abs_dir + '/' + project
+        project_local_dir = abs_dir + '/' + group + '/' + project
         if os.path.exists(project_local_dir):
-            continue
-        real_clone_cmd = clone_cmd.format(group = group, 
-            project = project, dir = project_local_dir)
-        print real_clone_cmd
-        subprocess.call(real_clone_cmd, shell = True)
+            sync_project(project_local_dir)
+        else:
+            clone_project(group, project, project_local_dir)
+
+def sync_project(project_path):
+    cmd = "git --git-dir={project_path}/.git --work-tree={project_path} pull -a"
+    cmd = cmd.format(project_path = project_path)
+    print cmd
+    subprocess.call(cmd, shell = True)
+
+def clone_project(group, project, project_path):
+    pwd = os.getcwd()
+    os.makedirs(project_path)
+    cmd = "cd {project_path} && \
+            git clone --mirror git@gitlab.mobvoi.com:{group}/{project}.git .git && \
+            git config --bool core.bare false && \
+            git reset --hard"
+    cmd = cmd.format(group = group, project = project, project_path = project_path)
+    print cmd
+    subprocess.call(cmd, shell = True)
+    subprocess.call("cd " + pwd, shell = True)
 
 if __name__ == '__main__':
     args = parse_args()
